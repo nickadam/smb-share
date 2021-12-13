@@ -3,3 +3,33 @@ services:
   smb:
     image: nickadam/smb-share
     build: .
+    environment:
+      # These are the default values if not specified
+      SHARE_NAME: data
+      SMB_USER: admin
+      SMB_UID: 1000
+      SMB_GID: 1000
+      FILEMODE: 644 # new files are created with these permissions
+      DIRMODE: 755 # new dirs are created with these permissions
+      PASSWORD: badpassword # if none specified a random password will be generated and displayed in the log
+      PASSWORD_FILE: /run/secrets/mysmbpassword # you can also use a secret
+    volumes:
+      - type: volume
+        source: data
+        target: /data
+    ports:
+      - target: 445
+        published: 445
+        mode: host
+      - target: 139
+        published: 139
+        mode: host
+    secrets:
+      - mysmbpassword
+
+volumes:
+  data:
+
+secrets:
+  mysmbpassword:
+    external: true
