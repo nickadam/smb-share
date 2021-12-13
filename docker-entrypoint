@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# set password from file
+if [ ! -z "$PASSWORD_FILE" ]
+then
+  export PASSWORD=$(cat "$PASSWORD_FILE")
+fi
+
+# generate random password
+if [ -z "$PASSWORD" ]
+then
+  export PASSWORD=$(tr -c -d "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" </dev/urandom | dd bs=42 count=1 2>/dev/null)
+  echo Generated password: $PASSWORD
+fi
+
+# add smb.conf from template
+if [ ! -f /etc/samba/smb.conf ]
+then
+  cat /smb.conf | \
+    sed "s/{SHARE_NAME}/$SHARE_NAME/" | \
+    sed "s/{FILEMODE}/$FILEMODE/" | \
+    sed "s/{DIRMODE}/$DIRMODE/" > /etc/samba/smb.conf && \
+  rm /smb.conf
+fi
+
+# create user
+groupadd -g $SMB_GID "$SMB_USER"
+useradd -u $SMB_UID -g $SMB_GID "$SMB_USER"
+echo -ne "$PASSWORD\n$PASSWORD\n" | smbpasswd -a -s "$SMB_USER"
+
+# chown dir if empty
+if [ -z "$(ls -A /data)" ]
+then
+  chown $SMB_UID:$SMB_GID /data
+fi
+
+$@
